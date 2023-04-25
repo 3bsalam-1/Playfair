@@ -1,2 +1,10 @@
 # Playfair
-Playfair encryption algorithm with c++
+
+---
+<h3>
+Playfair encryption algorithm
+</h3>
+
+- Used languages: c++
+
+---
