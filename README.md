@@ -5,6 +5,6 @@
 Playfair encryption algorithm
 </h3>
 
-- Used languages: c++
+- Used languages:  c++
 
 ---
