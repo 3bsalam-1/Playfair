@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test-linux:
+    name: Build & Test (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build tools
+        run: sudo apt-get update && sudo apt-get install -y build-essential
+      - name: Build
+        run: g++ -std=c++17 -O2 -Wall -Wextra -o playfair playfair.cpp
+      - name: Run encode and capture output
+        run: |
+          printf "E\nPLAYFAIR\nY\nHide the gold in the tree stump\n" > /tmp/input.txt
+          ./playfair < /tmp/input.txt > encoded.txt
+          sed -n '/OUTPUT:/,/^$/p' encoded.txt | sed '1d' | tr -d ' \n' > encoded_str.txt
+          echo "ENCODED=$(cat encoded_str.txt)" >> $GITHUB_ENV
+      - name: Run decode and verify
+        run: |
+          printf "D\nPLAYFAIR\nY\n${ENCODED}\n" > /tmp/decode_input.txt
+          ./playfair < /tmp/decode_input.txt > decoded.txt
+          decoded_letters=$(sed -n '/OUTPUT:/,/^$/p' decoded.txt | sed '1d' | tr -d ' \n' | tr -d 'X')
+          echo "Decoded letters: $decoded_letters"
+          if [[ "$decoded_letters" != *"HIDETHEGOLDINTHE"* ]]; then
+            echo "Decoded text did not contain expected substring" >&2
+            exit 1
+          fi
+
+  build-and-test-windows:
+    name: Build & Test (Windows - MSYS2)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install MSYS2 and mingw-w64
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            mingw-w64-x86_64-gcc
+      - name: Build (mingw)
+        shell: bash
+        run: |
+          g++ -std=c++17 -O2 -Wall -Wextra -o playfair.exe playfair.cpp
+      - name: Run encode and decode test
+        shell: bash
+        run: |
+          printf "E\nPLAYFAIR\nY\nHide the gold in the tree stump\n" > /tmp/input.txt
+          ./playfair.exe < /tmp/input.txt > encoded.txt
+          sed -n '/OUTPUT:/,/^$/p' encoded.txt | sed '1d' | tr -d ' \n' > encoded_str.txt
+          ENC=$(cat encoded_str.txt)
+          printf "D\nPLAYFAIR\nY\n${ENC}\n" > /tmp/decode_input.txt
+          ./playfair.exe < /tmp/decode_input.txt > decoded.txt
+          decoded_letters=$(sed -n '/OUTPUT:/,/^$/p' decoded.txt | sed '1d' | tr -d ' \n' | tr -d 'X')
+          echo "Decoded letters: $decoded_letters"
+          if [[ "$decoded_letters" != *"HIDETHEGOLDINTHE"* ]]; then
+            echo "Decoded text did not contain expected substring" >&2
+            exit 1
+          fi
